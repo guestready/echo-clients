@@ -193,4 +193,17 @@ describe("createFeedback", () => {
     expect(el<HTMLTextAreaElement>("textarea").value).toBe("");
     expect(el<HTMLElement>("[data-form-view]").hidden).toBe(false);
   });
+
+  it("renders the dialog in the requested language, right to left for Arabic", async () => {
+    setup({ locale: "fr-FR" });
+    await widget.open();
+    expect(el<HTMLElement>("#echo-title").textContent).toBe("Envoyer un retour");
+    expect(el<HTMLButtonElement>("[data-submit]").textContent).toBe("Envoyer");
+    expect(el<HTMLDialogElement>("dialog").lang).toBe("fr");
+    expect(el<HTMLDialogElement>("dialog").dir).toBe("ltr");
+    widget.destroy();
+
+    setup({ locale: "ar" });
+    expect(el<HTMLDialogElement>("dialog").dir).toBe("rtl");
+  });
 });

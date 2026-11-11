@@ -64,6 +64,8 @@ export interface FeedbackOptions {
   context?: () => Record<string, unknown>;
   /** Pass false to turn the screenshot off. */
   screenshot?: false | ScreenshotOptions;
+  /** Language of the built-in labels, e.g. "fr" or "pt-BR"; defaults to <html lang>, then the browser language, then English. */
+  locale?: string;
   labels?: Partial<Omit<Labels, "types">> & { types?: Partial<Record<TicketType, Partial<TypeLabels>>> };
   /** Screenshot included; defaults to 5. */
   maxFiles?: number;
