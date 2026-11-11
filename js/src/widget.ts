@@ -1,5 +1,6 @@
 import { HostApi, HostError } from "./api";
 import { mergeLabels } from "./labels";
+import { type Locale, RTL_LOCALES, resolveLocale } from "./locales";
 import { capturePage } from "./screenshot";
 import { STYLES } from "./styles";
 import type { FeedbackOptions, FeedbackWidget, Labels, Page, Ticket, TicketType } from "./types";
@@ -40,13 +41,14 @@ function newKey(): string {
 }
 
 export function createFeedback(options: FeedbackOptions): FeedbackWidget {
-  const labels: Labels = mergeLabels(options.labels);
+  const locale = resolveLocale(options.locale);
+  const labels: Labels = mergeLabels(options.labels, locale);
   const api = new HostApi(options);
   const maxFiles = options.maxFiles ?? 5;
 
   const host = document.createElement("echo-feedback");
   const root = host.attachShadow({ mode: "open" });
-  root.innerHTML = `<style>${STYLES}</style>${template(labels)}`;
+  root.innerHTML = `<style>${STYLES}</style>${template(labels, locale)}`;
   (options.container ?? document.body).appendChild(host);
 
   const $ = <T extends Element>(selector: string): T => root.querySelector(selector) as T;
@@ -292,13 +294,13 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
   };
 }
 
-function template(labels: Labels): string {
+function template(labels: Labels, locale: Locale): string {
   const tabs = TYPES.map(
     (value) =>
       `<button type="button" role="tab" class="tab" data-type="${value}" aria-selected="${value === "feedback"}">${escape(labels.types[value].tab)}</button>`,
   ).join("");
   return `
-<dialog aria-labelledby="echo-title">
+<dialog aria-labelledby="echo-title" lang="${locale}" dir="${RTL_LOCALES.has(locale) ? "rtl" : "ltr"}">
   <form novalidate>
     <div class="head" data-head>
       <div>

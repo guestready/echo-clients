@@ -1,4 +1,6 @@
 export { DEFAULT_LABELS } from "./labels";
+export { LOCALES, resolveLocale } from "./locales";
+export type { Locale } from "./locales";
 export type {
   FeedbackOptions,
   FeedbackWidget,

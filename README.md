@@ -12,13 +12,13 @@ The browser never holds Echo credentials: the widget posts to your backend, `ech
 Python 3.11+:
 
 ```bash
-pip install "echo-client[django] @ git+https://github.com/guestready/echo-clients@v0.1.1#subdirectory=python"
+pip install "echo-client[django] @ git+https://github.com/guestready/echo-clients@v0.2.0#subdirectory=python"
 ```
 
 JavaScript (`package.json`):
 
 ```json
-"@guestready/echo-feedback": "https://github.com/guestready/echo-clients/releases/download/v0.1.1/guestready-echo-feedback-0.1.1.tgz"
+"@guestready/echo-feedback": "https://github.com/guestready/echo-clients/releases/download/v0.2.0/guestready-echo-feedback-0.2.0.tgz"
 ```
 
 Each release also has `echo-feedback.iife.js`, a self-contained bundle exposing the global `EchoFeedback`.
@@ -58,7 +58,11 @@ const feedback = createFeedback({
 button.onclick = () => feedback.open(); // or feedback.open("bug")
 ```
 
-The dialog renders in a shadow root. The screenshot is taken from a DOM clone when the dialog opens; password inputs and elements matching `screenshot.mask` are painted over (`screenshot: false` turns it off). Other options: `labels` (any text, for translations), `onSubmitted(ticket)`, `maxFiles` (default 5).
+The dialog renders in a shadow root. The screenshot is taken from a DOM clone when the dialog opens; password inputs and elements matching `screenshot.mask` are painted over (`screenshot: false` turns it off). Other options: `onSubmitted(ticket)`, `maxFiles` (default 5).
+
+### Languages
+
+The dialog ships translated into English, French, Portuguese, Spanish, Italian, Arabic (right to left), German, Polish, Dutch and Czech. The language is the first supported one among the `locale` option (for example `locale: "fr"`), the page's `<html lang>`, then the browser's languages, else English. A region variant falls back to its base language (`pt-BR` uses Portuguese). `labels` still overrides any text, in any language.
 
 ## Development
 
