@@ -1,6 +1,6 @@
 {
   "name": "@guestready/echo-feedback",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "In-page feedback dialog for Echo: type, message, screenshot and attachments, sent through your own backend.",
   "license": "UNLICENSED",
   "type": "module",
