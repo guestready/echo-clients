@@ -17,8 +17,8 @@ h2 { margin: 0; font-size: 21px; line-height: 26px; font-weight: 700; letter-spa
 .subtitle { margin: 3px 0 0; color: var(--muted); }
 .icon-button { flex: none; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; }
 .icon-button:hover { background: #eef1f6; color: var(--ink); }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 16px; padding: 3px; border-radius: 8px; background: #eef1f6; }
-.tab { height: 32px; border: 0; border-radius: 6px; background: transparent; color: #5b6475; font-size: 13px; font-weight: 600; }
+.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 16px; padding: 3px; border-radius: 8px; background: #eef1f6; }
+.tab { min-height: 32px; padding: 4px 6px; border: 0; border-radius: 6px; background: transparent; color: #5b6475; font-size: 13px; font-weight: 600; line-height: 1.25; overflow-wrap: break-word; hyphens: auto; }
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { background: var(--primary); color: #fff; box-shadow: 0 1px 2px rgba(31, 36, 48, 0.18); }
 .label { display: block; margin: 17px 0 3px; font-size: 12.5px; font-weight: 600; }
