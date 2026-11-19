@@ -58,7 +58,7 @@ const feedback = createFeedback({
 button.onclick = () => feedback.open(); // or feedback.open("bug")
 ```
 
-The dialog renders in a shadow root. The dialog opens instantly; the screenshot is taken only when the user clicks "Add a screenshot", from a DOM clone, with a spinner while it runs. Password inputs and elements matching `screenshot.mask` are painted over. It gives up after `screenshot.timeout` ms (default 15000) and refuses pages with more than `screenshot.maxElements` elements (default 30000), leaving the user free to attach a file instead. `screenshot: false` hides the option. Other options: `onSubmitted(ticket)`, `maxFiles` (default 5).
+The dialog renders in a shadow root. The dialog opens instantly; the screenshot is taken only when the user clicks "Add a screenshot", from a DOM clone, with a spinner while it runs. Password inputs and elements matching `screenshot.mask` are painted over. It gives up after `screenshot.timeout` ms (default 15000) and refuses pages with more than `screenshot.maxElements` elements (default 15000), leaving the user free to attach a file instead. `screenshot: false` hides the option. Other options: `onSubmitted(ticket)`, `maxFiles` (default 5).
 
 ### Languages
 

@@ -53,7 +53,8 @@ textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 
 .button.primary { border-color: var(--primary); background: var(--primary); color: #fff; padding: 0 22px; }
 .button.primary:hover { background: var(--primary-dark); }
 .button:disabled { cursor: wait; opacity: 0.7; }
-.button.small { height: 30px; padding: 0 12px; font-size: 12.5px; }
+.button.small { height: auto; min-height: 30px; padding: 5px 12px; font-size: 12.5px; line-height: 1.25; text-align: start; }
+.shot[data-state="idle"] .shot-preview { display: none; }
 .shot-body .hint { margin-top: 4px; }
 .shot-preview { gap: 6px; flex-direction: column; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: echo-spin 0.8s linear infinite; }

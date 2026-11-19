@@ -6,7 +6,7 @@ const ALWAYS_MASKED = 'input[type="password"]';
 const MAX_BYTES = 9.5 * 1024 * 1024;
 const MASK_ATTRIBUTE = "data-echo-masked";
 const MASK_COLOR = "#C9CFDA";
-const MAX_ELEMENTS = 30000;
+const MAX_ELEMENTS = 15000;
 
 interface Box {
   left: number;

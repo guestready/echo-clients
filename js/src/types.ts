@@ -54,7 +54,7 @@ export interface ScreenshotOptions {
   scale?: number;
   /** Gives up after this many milliseconds; defaults to 15000. */
   timeout?: number;
-  /** Refuses to capture a page with more elements than this; defaults to 30000. */
+  /** Refuses to capture a page with more elements than this; defaults to 15000. */
   maxElements?: number;
 }
 
