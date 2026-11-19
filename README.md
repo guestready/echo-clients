@@ -18,7 +18,7 @@ pip install "echo-client[django] @ git+https://github.com/guestready/echo-client
 JavaScript (`package.json`):
 
 ```json
-"@guestready/echo-feedback": "https://github.com/guestready/echo-clients/releases/download/v0.2.0/guestready-echo-feedback-0.2.0.tgz"
+"@guestready/echo-feedback": "https://github.com/guestready/echo-clients/releases/download/v0.2.2/guestready-echo-feedback-0.2.2.tgz"
 ```
 
 Each release also has `echo-feedback.iife.js`, a self-contained bundle exposing the global `EchoFeedback`.
@@ -58,7 +58,7 @@ const feedback = createFeedback({
 button.onclick = () => feedback.open(); // or feedback.open("bug")
 ```
 
-The dialog renders in a shadow root. The screenshot is taken from a DOM clone when the dialog opens; password inputs and elements matching `screenshot.mask` are painted over (`screenshot: false` turns it off). Other options: `onSubmitted(ticket)`, `maxFiles` (default 5).
+The dialog renders in a shadow root. The dialog opens instantly; the screenshot is taken only when the user clicks "Add a screenshot", from a DOM clone, with a spinner while it runs. Password inputs and elements matching `screenshot.mask` are painted over. It gives up after `screenshot.timeout` ms (default 15000) and refuses pages with more than `screenshot.maxElements` elements (default 30000), leaving the user free to attach a file instead. `screenshot: false` hides the option. Other options: `onSubmitted(ticket)`, `maxFiles` (default 5).
 
 ### Languages
 
