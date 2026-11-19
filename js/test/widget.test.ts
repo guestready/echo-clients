@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FeedbackOptions, FeedbackWidget } from "../src";
 
 const capturePage = vi.fn();
-vi.mock("../src/screenshot", () => ({ capturePage: (...args: unknown[]) => capturePage(...args) }));
+vi.mock("../src/screenshot", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/screenshot")>()),
+  capturePage: (...args: unknown[]) => capturePage(...args),
+}));
 
 const { createFeedback } = await import("../src");
 
@@ -55,6 +58,11 @@ function el<T extends Element>(selector: string): T {
   return shadow().querySelector(selector) as T;
 }
 
+async function addScreenshot(): Promise<void> {
+  el<HTMLButtonElement>("[data-shot-add]").click();
+  await vi.waitFor(() => expect(el<HTMLElement>("[data-shot]").dataset.state).not.toBe("capturing"));
+}
+
 async function submit(): Promise<void> {
   el<HTMLFormElement>("form").dispatchEvent(new Event("submit", { cancelable: true }));
   await vi.waitFor(() => expect(el<HTMLButtonElement>("[data-submit]").disabled).toBe(false));
@@ -90,13 +98,31 @@ afterEach(() => {
 });
 
 describe("createFeedback", () => {
-  it("captures the page without the dialog, then sends screenshot and ticket through the host", async () => {
+  it("opens without capturing the page", async () => {
+    setup();
+    await widget.open();
+    expect(el<HTMLDialogElement>("dialog").open).toBe(true);
+    expect(capturePage).not.toHaveBeenCalled();
+    expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("idle");
+    expect(el<HTMLButtonElement>("[data-shot-add]").hidden).toBe(false);
+    expect(el<HTMLElement>("[data-shot-include-row]").hidden).toBe(true);
+  });
+
+  it("captures the page without the dialog on demand, then sends screenshot and ticket through the host", async () => {
     const options = setup();
     await widget.open("bug");
-    expect(capturePage).toHaveBeenCalledWith(document.querySelector("echo-feedback"), {});
-    expect(el<HTMLDialogElement>("dialog").open).toBe(true);
+    let finish: (blob: Blob) => void = () => {};
+    capturePage.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    el<HTMLButtonElement>("[data-shot-add]").click();
+    expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("capturing");
+    expect(el<HTMLButtonElement>("[data-shot-add]").disabled).toBe(true);
+    expect(el("[data-shot-preview]").textContent).toBe("Taking a screenshot...");
+    await vi.waitFor(() => expect(capturePage).toHaveBeenCalledWith(document.querySelector("echo-feedback"), {}));
+    finish(new Blob(["png"], { type: "image/png" }));
+    await vi.waitFor(() => expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("captured"));
     expect(shadow().textContent).not.toContain("Page you are coming from");
     expect(el<HTMLInputElement>("[data-shot-include]").checked).toBe(true);
+    expect(el<HTMLButtonElement>("[data-shot-add]").hidden).toBe(true);
 
     el<HTMLTextAreaElement>("textarea").value = "Save button does nothing";
     await submit();
@@ -132,6 +158,7 @@ describe("createFeedback", () => {
   it("leaves the screenshot out when unchecked", async () => {
     setup();
     await widget.open();
+    await addScreenshot();
     el<HTMLInputElement>("[data-shot-include]").checked = false;
     el<HTMLTextAreaElement>("textarea").value = "Nice";
     await submit();
@@ -142,6 +169,7 @@ describe("createFeedback", () => {
   it("shows the backend error and retries with the same key and fresh uploads", async () => {
     setup();
     await widget.open();
+    await addScreenshot();
     el<HTMLTextAreaElement>("textarea").value = "Broken";
     ticketStatus = 400;
     await submit();
@@ -157,7 +185,10 @@ describe("createFeedback", () => {
     capturePage.mockRejectedValueOnce(new Error("tainted"));
     setup();
     await widget.open();
-    expect(el<HTMLInputElement>("[data-shot-include]").disabled).toBe(true);
+    await addScreenshot();
+    expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("failed");
+    expect(el("[data-shot-preview]").textContent).toContain("could not be taken");
+    expect(el<HTMLButtonElement>("[data-shot-add]").disabled).toBe(false);
     el<HTMLTextAreaElement>("textarea").value = "Hello";
     await submit();
     expect(calls.map((call) => call.url)).toEqual(["/echo/tickets"]);
@@ -167,6 +198,23 @@ describe("createFeedback", () => {
     await widget.open();
     expect(el<HTMLElement>("[data-shot]").hidden).toBe(true);
     expect(capturePage).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up on a capture that takes too long", async () => {
+    capturePage.mockReturnValueOnce(new Promise(() => {}));
+    setup({ screenshot: { timeout: 20 } });
+    await widget.open();
+    await addScreenshot();
+    expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("failed");
+    expect(el<HTMLInputElement>("[data-shot-include]").checked).toBe(false);
+  });
+
+  it("does not capture a page with too many elements", async () => {
+    setup({ screenshot: { maxElements: 1 } });
+    await widget.open();
+    await addScreenshot();
+    expect(capturePage).not.toHaveBeenCalled();
+    expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("failed");
   });
 
   it("rejects files that are not images or videos", async () => {
@@ -187,10 +235,12 @@ describe("createFeedback", () => {
     widget.close();
     await widget.open();
     expect(el<HTMLTextAreaElement>("textarea").value).toBe("Draft");
+    await addScreenshot();
     await submit();
     widget.close();
     await widget.open();
     expect(el<HTMLTextAreaElement>("textarea").value).toBe("");
+    expect(el<HTMLElement>("[data-shot]").dataset.state).toBe("idle");
     expect(el<HTMLElement>("[data-form-view]").hidden).toBe(false);
   });
 

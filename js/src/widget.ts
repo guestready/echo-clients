@@ -1,7 +1,7 @@
 import { HostApi, HostError } from "./api";
 import { mergeLabels } from "./labels";
 import { type Locale, RTL_LOCALES, resolveLocale } from "./locales";
-import { capturePage } from "./screenshot";
+import { capturePage, pageTooLarge } from "./screenshot";
 import { STYLES } from "./styles";
 import type { FeedbackOptions, FeedbackWidget, Labels, Page, Ticket, TicketType } from "./types";
 
@@ -9,6 +9,7 @@ const TYPES: TicketType[] = ["feedback", "bug", "request"];
 const MB = 1024 * 1024;
 const MAX_IMAGE_BYTES = 10 * MB;
 const MAX_VIDEO_BYTES = 500 * MB;
+const CAPTURE_TIMEOUT_MS = 15000;
 const ACCEPT = "image/png,image/jpeg,image/gif,image/webp,image/heic,.heic,video/mp4,video/quicktime,video/webm";
 
 interface Attachment {
@@ -60,6 +61,9 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
   const shotSection = $<HTMLElement>("[data-shot]");
   const shotPreview = $<HTMLElement>("[data-shot-preview]");
   const shotInclude = $<HTMLInputElement>("[data-shot-include]");
+  const shotIncludeRow = $<HTMLLabelElement>("[data-shot-include-row]");
+  const shotAdd = $<HTMLButtonElement>("[data-shot-add]");
+  const shotRetake = $<HTMLButtonElement>("[data-retake]");
   const fileInput = $<HTMLInputElement>("input[type=file]");
   const drop = $<HTMLLabelElement>("[data-drop]");
   const fileList = $<HTMLUListElement>("[data-files]");
@@ -78,6 +82,7 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
   let shotUrl = "";
   let sending = false;
   let sent = false;
+  let capturing = 0;
 
   function selectType(next: TicketType): void {
     type = next;
@@ -91,7 +96,15 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
     error.hidden = !message;
   }
 
-  function setShot(blob: Blob | null): void {
+  function showShotState(state: "idle" | "capturing" | "captured" | "failed"): void {
+    shotSection.dataset.state = state;
+    shotAdd.hidden = state === "captured";
+    shotAdd.disabled = state === "capturing";
+    shotIncludeRow.hidden = state !== "captured";
+    shotRetake.hidden = state !== "captured";
+  }
+
+  function setShot(blob: Blob | null, failure = ""): void {
     if (shotUrl) URL.revokeObjectURL(shotUrl);
     shotUrl = blob ? URL.createObjectURL(blob) : "";
     shot = blob ? { file: blob, name: blob.type === "image/png" ? "screenshot.png" : "screenshot.jpg" } : null;
@@ -108,21 +121,40 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
       link.appendChild(image);
       shotPreview.appendChild(link);
     } else {
-      shotPreview.textContent = labels.captureFailed;
+      shotPreview.textContent = failure;
     }
-    shotInclude.disabled = !blob;
     shotInclude.checked = Boolean(blob);
+    showShotState(blob ? "captured" : failure ? "failed" : "idle");
   }
 
   async function takeScreenshot(): Promise<void> {
-    if (options.screenshot === false) return;
-    shotInclude.disabled = true;
-    shotPreview.textContent = labels.capturing;
+    if (options.screenshot === false || capturing) return;
+    const settings = options.screenshot ?? {};
+    const attempt = ++capturing;
+    showShotState("capturing");
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    shotPreview.replaceChildren(spinner, labels.capturing);
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      setShot(await capturePage(host, options.screenshot ?? {}));
+      await nextPaint();
+      if (pageTooLarge(settings)) throw new Error("page too large");
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), settings.timeout ?? CAPTURE_TIMEOUT_MS);
+      });
+      const blob = await Promise.race([capturePage(host, settings), timeout]);
+      if (attempt === capturing) setShot(blob);
     } catch {
-      setShot(null);
+      if (attempt === capturing) setShot(null, labels.captureFailed);
+    } finally {
+      clearTimeout(timer);
+      if (attempt === capturing) capturing = 0;
     }
+  }
+
+  function clearShot(): void {
+    capturing = 0;
+    setShot(null);
   }
 
   function renderFiles(): void {
@@ -244,6 +276,7 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
     showError("");
     selectType("feedback");
     renderFiles();
+    clearShot();
   }
 
   for (const tab of tabs) tab.addEventListener("click", () => selectType(tab.dataset.type as TicketType));
@@ -262,16 +295,17 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
     event.preventDefault();
     void send();
   });
-  $<HTMLButtonElement>("[data-retake]").addEventListener("click", () => void takeScreenshot());
+  shotAdd.addEventListener("click", () => void takeScreenshot());
+  shotRetake.addEventListener("click", () => void takeScreenshot());
   $<HTMLButtonElement>("[data-another]").addEventListener("click", () => {
     reset();
-    void takeScreenshot();
     body.focus();
   });
   for (const button of root.querySelectorAll<HTMLButtonElement>("[data-close]"))
     button.addEventListener("click", () => dialog.close());
   dialog.addEventListener("cancel", (event) => sending && event.preventDefault());
   shotSection.hidden = options.screenshot === false;
+  clearShot();
 
   return {
     async open(initial?: TicketType) {
@@ -279,10 +313,8 @@ export function createFeedback(options: FeedbackOptions): FeedbackWidget {
       if (sent) reset();
       if (initial && TYPES.includes(initial)) selectType(initial);
       page = options.page?.() ?? defaultPage();
-      const capture = takeScreenshot();
       dialog.showModal();
       body.focus();
-      await capture;
     },
     close() {
       dialog.close();
@@ -316,7 +348,8 @@ function template(labels: Labels, locale: Locale): string {
       <div class="shot" data-shot>
         <div class="shot-preview" data-shot-preview></div>
         <div class="shot-body">
-          <label class="check"><input type="checkbox" data-shot-include> ${escape(labels.screenshot)}</label>
+          <button type="button" class="button small" data-shot-add>${escape(labels.addScreenshot)}</button>
+          <label class="check" data-shot-include-row><input type="checkbox" data-shot-include> ${escape(labels.screenshot)}</label>
           <p class="hint">${escape(labels.screenshotHint)}</p>
           <button type="button" class="link" data-retake>${escape(labels.retake)}</button>
         </div>
@@ -346,4 +379,8 @@ function template(labels: Labels, locale: Locale): string {
     </div>
   </form>
 </dialog>`;
+}
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 }

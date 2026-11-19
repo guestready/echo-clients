@@ -6,12 +6,18 @@ const ALWAYS_MASKED = 'input[type="password"]';
 const MAX_BYTES = 9.5 * 1024 * 1024;
 const MASK_ATTRIBUTE = "data-echo-masked";
 const MASK_COLOR = "#C9CFDA";
+const MAX_ELEMENTS = 15000;
 
 interface Box {
   left: number;
   top: number;
   width: number;
   height: number;
+}
+
+/** Cloning that many nodes would block the page for too long. */
+export function pageTooLarge(options: ScreenshotOptions = {}): boolean {
+  return document.getElementsByTagName("*").length > (options.maxElements ?? MAX_ELEMENTS);
 }
 
 /** Renders the visible part of the page from a DOM clone, so `exclude` (the dialog) never shows up in it. */

@@ -21,6 +21,7 @@ export interface Labels {
   title: string;
   subtitle: string;
   types: Record<TicketType, TypeLabels>;
+  addScreenshot: string;
   screenshot: string;
   screenshotHint: string;
   capturing: string;
@@ -51,6 +52,10 @@ export interface ScreenshotOptions {
   mask?: string;
   /** Pixel ratio of the capture; defaults to min(devicePixelRatio, 2). */
   scale?: number;
+  /** Gives up after this many milliseconds; defaults to 15000. */
+  timeout?: number;
+  /** Refuses to capture a page with more elements than this; defaults to 15000. */
+  maxElements?: number;
 }
 
 export interface FeedbackOptions {
@@ -62,7 +67,7 @@ export interface FeedbackOptions {
   page?: () => Page;
   /** Merged into the ticket context; your backend adds its own trusted fields on top. */
   context?: () => Record<string, unknown>;
-  /** Pass false to turn the screenshot off. */
+  /** Taken only when the user clicks "Add a screenshot". Pass false to hide that option. */
   screenshot?: false | ScreenshotOptions;
   /** Language of the built-in labels, e.g. "fr" or "pt-BR"; defaults to <html lang>, then the browser language, then English. */
   locale?: string;
@@ -75,7 +80,7 @@ export interface FeedbackOptions {
 }
 
 export interface FeedbackWidget {
-  /** Captures the page (without the dialog), then shows the dialog. */
+  /** Shows the dialog. */
   open(type?: TicketType): Promise<void>;
   close(): void;
   destroy(): void;
